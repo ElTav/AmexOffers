@@ -1,3 +1,4 @@
 *.idea
 *venv
 offers.csv
+.DS_Store
