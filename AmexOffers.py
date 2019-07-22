@@ -101,7 +101,7 @@ def process_card(driver, offer_map, account_list, card_idx):
             EC.element_to_be_clickable((By.XPATH, offers_xpath))
         )
     except Exception as e:
-        print(f"Ran into error waiting for the login form to load: {e}")
+        print(f"Ran into error waiting for the offers section to load: {e}")
         return
 
     # Process eligible offers
