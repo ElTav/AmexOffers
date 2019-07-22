@@ -1,16 +1,18 @@
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException
+
 from os import getcwd
 from platform import system
 from functools import total_ordering
 import csv
 
-amex_login = ""
-amex_pw = ""
-
-OFFER_PROCESSING_NOTIFICATION = 25
+AMEX_LOGIN = ""
+AMEX_PW = ""
+NOTIFICATION_THRESHOLD = 10
 
 
 @total_ordering
@@ -49,7 +51,10 @@ def get_driver():
     else:  # Windows
         filename = "chromedriver.windows"
     driver_path = f"{getcwd()}/{filename}"
-    return webdriver.Chrome(executable_path=driver_path)
+
+    options = Options()
+    options.add_argument("--headless")
+    return webdriver.Chrome(executable_path=driver_path, options=options)
 
 
 def open_card_stack(driver, initial_open=False):
@@ -57,8 +62,8 @@ def open_card_stack(driver, initial_open=False):
         WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "section.axp-account-switcher span.card-stack button"))
         )
-    except Exception as e:
-        print(f"Ran into error waiting for the card stack to load: {e}")
+    except:
+        print(f"Ran into error waiting for the card stack to load. Is your username/pw correct?")
         return
     card_stack = driver.find_element_by_css_selector("section.axp-account-switcher span.card-stack button")
     card_stack.click()
@@ -77,13 +82,10 @@ def get_card_names_from_account_list(driver, num_cards):
     return account_names
 
 
-# Selects the card, opens all the offers, peruses
-def add_card_to_offers(driver, offer_map, account_list, card_idx):
+def process_card(driver, offer_map, account_list, card_idx):
     # Select the card to process
     account_list[card_idx].click()
-
     offers_xpath = '//*[@id="offers"]/div/section[2]/section/div'
-
     try:
         WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, offers_xpath))
@@ -92,18 +94,29 @@ def add_card_to_offers(driver, offer_map, account_list, card_idx):
         print(f"Ran into error waiting for the login form to load: {e}")
         return
 
+    # Process eligible offers
+    add_card_to_offers(driver, offer_map, account_list, card_idx, offers_xpath, "Available")
+    driver.find_element_by_xpath('//*[@id="offers-nav"]/div[1]/div/a[2]').click()  # Click on enrolled offers
+    add_card_to_offers(driver, offer_map, account_list, card_idx, offers_xpath, "Enrolled")
+    driver.find_element_by_xpath('//*[@id="offers-nav"]/div[1]/div/a[1]').click()  # Click on available offers
+
+
+# Selects the card, opens all the offers, peruses
+def add_card_to_offers(driver, offer_map, account_list, card_idx, offers_xpath, status):
+
     all_offers = driver.find_elements_by_xpath(offers_xpath)
     i = 1
     for offer_body in all_offers:
-        offer_info = offer_body.find_element_by_class_name("offer-info")
+        try:
+            offer_info = offer_body.find_element_by_class_name("offer-info")
+        except NoSuchElementException:
+            # No enrolled or available offers
+            return
+
         if "Spend" not in offer_info.text: # Ignore Amex's random ads
             continue
 
         offer_info_children = offer_info.find_elements_by_css_selector("p")
-        if len(offer_info_children) != 2:
-            print(f"Error getting offer info for offer: {offer_body.text})")
-            continue
-
         offer = offer_info_children[0].text
         merchant = offer_info_children[1].text
         expiration = offer_body.find_element_by_css_selector(".offer-expires span span").text
@@ -113,23 +126,23 @@ def add_card_to_offers(driver, offer_map, account_list, card_idx):
 
         # Initialize the list determining whether each particular card is enrolled in this offer
         if len(offer_obj.enrolled_cards) == 0:
-            offer_obj.enrolled_cards = [False] * len(account_list)
+            offer_obj.enrolled_cards = ["Unavailable"] * len(account_list)
 
-        offer_obj.enrolled_cards[card_idx] = True
+        offer_obj.enrolled_cards[card_idx] = status
         offer_map[offer_hash] = offer_obj
-        if i % OFFER_PROCESSING_NOTIFICATION == 0:
-            print(f"Processed offer {i} of {len(all_offers)}")
+        if i % NOTIFICATION_THRESHOLD == 0:
+            print(f"Processed {i} {status} offers")
         i += 1
 
 
 def write_offers_to_file(offer_objects, card_names):
     headers = ["Offer", "Merchant", "Expiration"] + card_names
-    i = 0
+    i = 1
     with open('offers.csv', 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
         writer.writerow(headers)
         for offer_obj in offer_objects:
-            if i % OFFER_PROCESSING_NOTIFICATION == 0:
+            if i % NOTIFICATION_THRESHOLD == 0:
                 print(f"Writing offer {i} of {len(offer_objects)} to the CSV file")
             writer.writerow(offer_obj.get_csv_line())
 
@@ -139,6 +152,7 @@ def write_offers_to_file(offer_objects, card_names):
 
 
 def login(driver):
+    print("Logging in")
     # Wait for the login fields and button to load
     try:
         WebDriverWait(driver, 10).until(
@@ -154,16 +168,21 @@ def login(driver):
         print(f"Ran into error waiting for the login form to load: {e}")
         return
     username_field = driver.find_element_by_id("login-user")
-    username_field.send_keys(amex_login)
+    username_field.send_keys(AMEX_LOGIN)
 
     password_field = driver.find_element_by_id("login-password")
-    password_field.send_keys(amex_pw)
+    password_field.send_keys(AMEX_PW)
 
     login_button = driver.find_element_by_id("login-submit")
     login_button.click()
+    print("Finished logging in")
 
 
 def main():
+    if AMEX_LOGIN == "" or AMEX_PW == "":
+        print("Fill out your username and/or password")
+        return
+
     driver = get_driver()
     driver.get("https://global.americanexpress.com/")
 
@@ -186,7 +205,7 @@ def main():
         # Regenerate account list elements as the references refresh after clicking on them
         account_list = driver.find_elements_by_xpath('//*[@id="accounts"]/section')
 
-        add_card_to_offers(driver, offer_map, account_list, i)
+        process_card(driver, offer_map, account_list, i)
         print(f"Finished processing offers for card: {card_names[i]}")
         open_card_stack(driver)
 
