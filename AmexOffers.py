@@ -3,7 +3,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 
 from os import getcwd
 from platform import system
@@ -39,7 +39,7 @@ class Offer:
         return self.merchant < other.merchant
 
     def get_csv_line(self):
-        return [self.text, self.merchant, self.expiration] + self.enrolled_cards
+        return [self.text, self.merchant, self.expiration] + [card.upper() for card in self.enrolled_cards]
 
 
 def get_driver():
@@ -54,19 +54,29 @@ def get_driver():
 
     options = Options()
     options.add_argument("--headless")
+    options.add_argument('window-size=1920x1080')  # The website layout changes for the default window size
+    options.add_argument("--start-maximized")
     return webdriver.Chrome(executable_path=driver_path, options=options)
 
 
 def open_card_stack(driver, initial_open=False):
+    card_stack_css = "section.axp-account-switcher span.card-stack button"
     try:
         WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "section.axp-account-switcher span.card-stack button"))
+            EC.element_to_be_clickable((By.CSS_SELECTOR, card_stack_css))
         )
-    except:
+    except NoSuchElementException:
         print(f"Ran into error waiting for the card stack to load. Is your username/pw correct?")
         return
-    card_stack = driver.find_element_by_css_selector("section.axp-account-switcher span.card-stack button")
-    card_stack.click()
+
+    card_stack = driver.find_element_by_css_selector(card_stack_css)
+
+    try:
+        card_stack.click()
+    except ElementClickInterceptedException:
+        print("Something unexpected went wrong with opening the card stack. Try running the script again")
+        return
+
     if initial_open:
         view_all = driver.find_element_by_css_selector('[title="View All"]')
         view_all.click()
@@ -113,7 +123,7 @@ def add_card_to_offers(driver, offer_map, account_list, card_idx, offers_xpath, 
             # No enrolled or available offers
             return
 
-        if "Spend" not in offer_info.text: # Ignore Amex's random ads
+        if "Spend" not in offer_info.text:  # Ignore Amex's random ads
             continue
 
         offer_info_children = offer_info.find_elements_by_css_selector("p")
@@ -126,7 +136,7 @@ def add_card_to_offers(driver, offer_map, account_list, card_idx, offers_xpath, 
 
         # Initialize the list determining whether each particular card is enrolled in this offer
         if len(offer_obj.enrolled_cards) == 0:
-            offer_obj.enrolled_cards = ["Unavailable"] * len(account_list)
+            offer_obj.enrolled_cards = ["N/A"] * len(account_list)
 
         offer_obj.enrolled_cards[card_idx] = status
         offer_map[offer_hash] = offer_obj
@@ -136,16 +146,16 @@ def add_card_to_offers(driver, offer_map, account_list, card_idx, offers_xpath, 
 
 
 def write_offers_to_file(offer_objects, card_names):
+    print("Started writing offers to file")
     headers = ["Offer", "Merchant", "Expiration"] + card_names
     i = 1
     with open('offers.csv', 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
         writer.writerow(headers)
         for offer_obj in offer_objects:
-            if i % NOTIFICATION_THRESHOLD == 0:
-                print(f"Writing offer {i} of {len(offer_objects)} to the CSV file")
             writer.writerow(offer_obj.get_csv_line())
-
+            if i % NOTIFICATION_THRESHOLD == 0:
+                print(f"Wrote offer {i} of {len(offer_objects)}")
             i += 1
 
     print("Finished writing all offers!")
@@ -210,7 +220,7 @@ def main():
         open_card_stack(driver)
 
     driver.close()
-
+    print("Finished processing all offers")
     offer_list = list(offer_map.values())
     offer_list.sort()
     write_offers_to_file(offer_list, card_names)
