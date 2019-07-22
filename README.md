@@ -12,7 +12,7 @@ Sample output will look like this
 
 2) Open up the Python file and set `AMEX_LOGIN` and `AMEX_PW` to your American Express login and password, respectively
 
-3) Install the Selenium Python module if it isn't already installed (everything else should be installed by default)
+3) Install the Selenium Python module if it isn't already installed with `python -m pip install selenium` or install it into your virtual environment if you know how to do so. 
 
 4) Run the script with `python3 AmexOffers.py`
 
