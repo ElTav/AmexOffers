@@ -12,7 +12,7 @@ import csv
 
 AMEX_LOGIN = ""
 AMEX_PW = ""
-NOTIFICATION_THRESHOLD = 10
+NOTIFICATION_THRESHOLD = 10  # The number of offers to process/write before printing an update
 
 
 @total_ordering
