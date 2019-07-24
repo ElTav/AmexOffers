@@ -87,7 +87,7 @@ def get_card_names_from_account_list(driver, num_cards):
     account_names = []
     # XPath starts at 1
     for i in range(1, num_cards + 1):
-        account_name = driver.find_element_by_xpath(f'//*[@id="accounts"]/section[{i}]/header/section/div/div[2]/div/p')
+        account_name = driver.find_element_by_xpath(f'//*[@id="accounts"]/section[{i}]/header/section/div/div[2]/div')
         account_names.append(account_name.text)
     return account_names
 
@@ -210,13 +210,21 @@ def main():
 
     for i in range(num_cards):
         # Assume stack is open
-        print(f"Processing offers for card: {card_names[i]}")
+        card_name = card_names[i]
+        if "Canceled" in card_name:
+            # The 'Canceled' text is stored in a separate <p> under the parent div, so strip it and the
+            # captured newline out when printing
+            cleaned_name = card_name.replace('\nCanceled', '')
+            print(f"Skipping canceled card: {cleaned_name}")
+            continue
+
+        print(f"Processing offers for card: {card_name}")
 
         # Regenerate account list elements as the references refresh after clicking on them
         account_list = driver.find_elements_by_xpath('//*[@id="accounts"]/section')
 
         process_card(driver, offer_map, account_list, i)
-        print(f"Finished processing offers for card: {card_names[i]}")
+        print(f"Finished processing offers for card: {card_name}")
         open_card_stack(driver)
 
     driver.close()
