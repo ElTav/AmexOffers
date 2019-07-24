@@ -56,6 +56,7 @@ def get_driver():
     options.add_argument("--headless")
     options.add_argument('window-size=1920x1080')  # The website layout changes for the default window size
     options.add_argument("--start-maximized")
+    options.add_argument('log-level=3')
     return webdriver.Chrome(executable_path=driver_path, options=options)
 
 
