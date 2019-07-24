@@ -149,7 +149,7 @@ def write_offers_to_file(offer_objects, card_names):
     print("Started writing offers to file")
     headers = ["Offer", "Merchant", "Expiration"] + card_names
     i = 1
-    with open('offers.csv', 'w') as csvfile:
+    with open('offers.csv', 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
         writer.writerow(headers)
         for offer_obj in offer_objects:
