@@ -150,7 +150,7 @@ def write_offers_to_file(offer_objects, card_names):
     headers = ["Offer", "Merchant", "Expiration"] + card_names
     i = 1
     with open('offers.csv', 'w') as csvfile:
-        writer = csv.writer(csvfile, delimiter=',', newline='')
+        writer = csv.writer(csvfile, delimiter=',')
         writer.writerow(headers)
         for offer_obj in offer_objects:
             writer.writerow(offer_obj.get_csv_line())
