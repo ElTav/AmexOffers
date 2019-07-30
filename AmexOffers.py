@@ -189,6 +189,12 @@ def login(driver):
     print("Finished logging in")
 
 
+def is_canceled_card(card_name):
+    if "Canceled" in card_name:
+        return True
+    return False
+
+
 def main():
     if AMEX_LOGIN == "" or AMEX_PW == "":
         print("Fill out your username and/or password")
@@ -212,7 +218,7 @@ def main():
     for i in range(num_cards):
         # Assume stack is open
         card_name = card_names[i]
-        if "Canceled" in card_name:
+        if is_canceled_card(card_name):
             # The 'Canceled' text is stored in a separate <p> under the parent div, so strip it and the
             # captured newline out when printing
             cleaned_name = card_name.replace('\nCanceled', '')
