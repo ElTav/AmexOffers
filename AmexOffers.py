@@ -123,16 +123,20 @@ def add_card_to_offers(driver, offer_map, account_list, card_idx, offers_xpath, 
             # No enrolled or available offers
             return
 
-        if "Spend" not in offer_info.text:  # Ignore Amex's random ads
+        try:
+            expiration = offer_body.find_element_by_css_selector(".offer-expires span span")
+
+        except NoSuchElementException:
+            #  Not a "Spend X get Y or or Get Y bonus points" offer, as they don't expire
             continue
 
         offer_info_children = offer_info.find_elements_by_css_selector("p")
         offer = offer_info_children[0].text
         merchant = offer_info_children[1].text
-        expiration = offer_body.find_element_by_css_selector(".offer-expires span span").text
 
-        offer_hash = hash((offer, merchant, expiration))
-        offer_obj = offer_map.get(offer_hash, Offer(offer, merchant, expiration))
+        expiration_text = expiration.text
+        offer_hash = hash((offer, merchant, expiration_text))
+        offer_obj = offer_map.get(offer_hash, Offer(offer, merchant, expiration_text))
 
         # Initialize the list determining whether each particular card is enrolled in this offer
         if len(offer_obj.enrolled_cards) == 0:
