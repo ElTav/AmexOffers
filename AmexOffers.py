@@ -12,7 +12,6 @@ import csv
 
 AMEX_LOGIN = ""
 AMEX_PW = ""
-NOTIFICATION_THRESHOLD = 10  # The number of offers to process/write before printing an update
 
 
 @total_ordering
@@ -116,7 +115,7 @@ def process_card(driver, offer_map, account_list, card_idx):
 def add_card_to_offers(driver, offer_map, account_list, card_idx, offers_xpath, status):
 
     all_offers = driver.find_elements_by_xpath(offers_xpath)
-    i = 1
+    print(f"Found {len(all_offers)} {status} offers")
     for offer_body in all_offers:
         try:
             offer_info = offer_body.find_element_by_class_name("offer-info")
@@ -141,25 +140,18 @@ def add_card_to_offers(driver, offer_map, account_list, card_idx, offers_xpath, 
 
         offer_obj.enrolled_cards[card_idx] = status
         offer_map[offer_hash] = offer_obj
-        if i % NOTIFICATION_THRESHOLD == 0:
-            print(f"Processed {i} {status} offers")
-        i += 1
 
 
 def write_offers_to_file(offer_objects, card_names):
-    print("Started writing offers to file")
+    print(f"Writing {len(offer_objects)} offers to offers.csv")
     headers = ["Offer", "Merchant", "Expiration"] + card_names
-    i = 1
     with open('offers.csv', 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
         writer.writerow(headers)
         for offer_obj in offer_objects:
             writer.writerow(offer_obj.get_csv_line())
-            if i % NOTIFICATION_THRESHOLD == 0:
-                print(f"Wrote offer {i} of {len(offer_objects)}")
-            i += 1
 
-    print("Finished writing all offers!")
+    print("Finished writing all offers to offers.csv")
 
 
 def login(driver):
@@ -175,8 +167,8 @@ def login(driver):
         WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.ID, "login-submit"))
         )
-    except Exception as e:
-        print(f"Ran into error waiting for the login form to load: {e}")
+    except Exception:
+        print(f"Ran into error waiting for the login form to load")
         return
     username_field = driver.find_element_by_id("login-user")
     username_field.send_keys(AMEX_LOGIN)
