@@ -78,8 +78,11 @@ def open_card_stack(driver, initial_open=False):
         return
 
     if initial_open:
-        view_all = driver.find_element_by_css_selector('[title="View All"]')
-        view_all.click()
+        try:
+            view_all = driver.find_element_by_css_selector('[title="View All"]')
+            view_all.click()
+        except NoSuchElementException:  # User doesn't have enough cards to expand the list
+            return
 
 
 # Assumes card stack is open
