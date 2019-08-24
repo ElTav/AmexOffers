@@ -9,6 +9,8 @@ from os import getcwd
 from platform import system
 from functools import total_ordering
 import csv
+from datetime import datetime, timedelta
+import re
 
 AMEX_LOGIN = ""
 AMEX_PW = ""
@@ -137,9 +139,9 @@ def add_card_to_offers(driver, offer_map, account_list, card_idx, offers_xpath, 
         offer = offer_info_children[0].text
         merchant = offer_info_children[1].text
 
-        expiration_text = expiration.text
-        offer_hash = hash((offer, merchant, expiration_text))
-        offer_obj = offer_map.get(offer_hash, Offer(offer, merchant, expiration_text))
+        expiration_date = convert_expiration_to_date(expiration.text)
+        offer_hash = hash((offer, merchant, expiration_date))
+        offer_obj = offer_map.get(offer_hash, Offer(offer, merchant, expiration_date))
 
         # Initialize the list determining whether each particular card is enrolled in this offer
         if len(offer_obj.enrolled_cards) == 0:
@@ -147,6 +149,25 @@ def add_card_to_offers(driver, offer_map, account_list, card_idx, offers_xpath, 
 
         offer_obj.enrolled_cards[card_idx] = status
         offer_map[offer_hash] = offer_obj
+
+
+def convert_expiration_to_date(expiration):
+    days = 0
+    if "Expires" not in expiration:
+        return expiration
+    elif "tomorrow" in expiration:  # "Expires tomorrow" case
+        days = 1
+    else:
+        found_days = re.findall("\d+", expiration)
+        if len(found_days) != 1:
+            print(f"Unknown expiration date format: {expiration}")
+        else:
+            days = int(found_days[0])
+
+    expiration_date_format = "%m/%d/%y"
+    today = datetime.today()
+    expiration_date = today + timedelta(days=days)
+    return expiration_date.strftime(expiration_date_format)
 
 
 def write_offers_to_file(offer_objects, card_names):
