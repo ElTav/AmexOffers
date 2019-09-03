@@ -157,10 +157,12 @@ def convert_expiration_to_date(expiration):
         return expiration
     elif "tomorrow" in expiration:  # "Expires tomorrow" case
         days = 1
+    elif "today" in expiration:  # "Expires today" case
+        days = 0
     else:
         found_days = re.findall("\d+", expiration)
         if len(found_days) != 1:
-            print(f"Unknown expiration date format: {expiration}")
+            print(f"Unknown expiration date format: {expiration}, defaulting to today")
         else:
             days = int(found_days[0])
 
