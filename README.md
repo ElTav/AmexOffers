@@ -10,7 +10,7 @@ Sample output will look like this
 
 1. Install Python 3 if you haven't already ([instructions](https://realpython.com/installing-python/))
 
-2. Clone the repository or download the Python file as well as the appropriate chromedriver for your OS and place them in the same directory. The included chromedrivers are for Chrome version 75, but if you're using a different version feel free to download the appropriate one from [here](https://sites.google.com/a/chromium.org/chromedriver/downloads)
+2. Clone the repository or download the Python file as well as the appropriate chromedriver for your OS and place them in the same directory. The included chromedrivers are for Chrome version 77, but if you're using a different version feel free to download the appropriate one from [here](https://sites.google.com/a/chromium.org/chromedriver/downloads)
 
 3. Install the Selenium Python module if it isn't already installed with `python3 -m pip install selenium` or by following the instructions [here](https://selenium-python.readthedocs.io/installation.html)
 
