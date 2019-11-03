@@ -129,17 +129,23 @@ def add_card_to_offers(driver, offer_map, account_list, card_idx, offers_xpath, 
             return
 
         try:
-            expiration = offer_body.find_element_by_css_selector(".offer-expires span span")
-
+            expiration = offer_body.find_element_by_css_selector(".offer-expires")
         except NoSuchElementException:
             #  Not a "Spend X get Y or or Get Y bonus points" offer, as they don't expire
             continue
+
+        try:
+            expiration_date = offer_body.find_element_by_css_selector("[data-testid='expirationDate']")
+        except NoSuchElementException:
+            # Of the form "Expires tomorrow" or "Expires in 13 days"
+            expiration_date = expiration.find_element_by_css_selector("span span")
+
 
         offer_info_children = offer_info.find_elements_by_css_selector("p")
         offer = offer_info_children[0].text
         merchant = offer_info_children[1].text
 
-        expiration_date = convert_expiration_to_date(expiration.text)
+        expiration_date = convert_expiration_to_date(expiration_date.text)
         offer_hash = hash((offer, merchant, expiration_date))
         offer_obj = offer_map.get(offer_hash, Offer(offer, merchant, expiration_date))
 
